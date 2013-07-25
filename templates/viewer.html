@@ -1,0 +1,152 @@
+<html>
+  <head>
+    <title>bookreader example</title>
+
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='BookReader.css') }}"/>
+    <script type="text/javascript" src="{{ url_for('static', filename='jquery-1.4.2.min.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='jquery-ui-1.8.5.custom.min.js') }}"></script>
+
+    <script type="text/javascript" src="{{ url_for('static', filename='dragscrollable.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='jquery.colorbox-min.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='jquery.ui.ipad.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='jquery.bt.min.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='BookReader.js') }}"></script>
+  </head>
+  <body>
+    <div id="BookReader"/>
+    <script type="text/javascript">
+      // We cache the page dimensions in this global array
+    var dimensions = {};
+
+    br = new BookReader();
+
+
+    // Get/set metadata
+    jQuery.ajax({
+      async: false,
+      url: "{{ url_for('get_book', bookname=bookname) }}",
+      dataType: "json",
+      success: function(data) {
+        br.numLeafs = data['num_pages'];
+        br.bookTitle = data['title'];
+        br.bookUrl  = "{{ url_for('view', bookname=bookname) }}";
+      }
+    });
+  
+
+      // Specify the path where images for the UI are located
+      br.imagesBaseURL = '{{ url_for(endpoint='static', filename='img/') }}';
+
+      br.getPageURI = function(index, reduce, rotate) {
+        // Construct a string that holds the URL to the page with `index`.
+        var url = '{{ url_for('get_image', bookname=bookname) }}' + (index+1);
+        if (1/reduce < 1) {
+          url += '?scale=' + 1/reduce;
+        }
+        return url;
+      }
+
+      br.getDimensions = function(index) {
+        if (dimensions[index] === undefined) {
+          jQuery.ajax({
+            async: false,
+            url: "{{ url_for('get_dimensions', bookname=bookname) }}" + (index+1),
+            dataType: "json",
+            success: function(data) {
+              dimensions[index] = data;
+            }
+          });
+        }
+        return dimensions[index];
+      }
+
+      br.getPageWidth = function(index) {
+        return this.getDimensions(index)['width'];
+      }
+      br.getPageHeight = function(index) {
+        return this.getDimensions(index)['height'];
+      }
+
+      // Return which side, left or right, that a given page should be displayed on
+      br.getPageSide = function(index) {
+        if (0 == (index & 0x1)) {
+          return 'R';
+        } else {
+          return 'L';
+        }
+      }
+
+      // This function returns the left and right indices for the user-visible
+      // spread that contains the given index.  The return values may be
+      // null if there is no facing page or the index is invalid.
+      br.getSpreadIndices = function(pindex) {
+        var spreadIndices = [null, null];
+        if ('rl' == this.pageProgression) {
+          // Right to Left
+          if (this.getPageSide(pindex) == 'R') {
+            spreadIndices[1] = pindex;
+            spreadIndices[0] = pindex + 1;
+          } else {
+            // Given index was LHS
+            spreadIndices[0] = pindex;
+            spreadIndices[1] = pindex - 1;
+          }
+        } else {
+          // Left to right
+          if (this.getPageSide(pindex) == 'L') {
+            spreadIndices[0] = pindex;
+            spreadIndices[1] = pindex + 1;
+          } else {
+            // Given index was RHS
+            spreadIndices[1] = pindex;
+            spreadIndices[0] = pindex - 1;
+          }
+        }
+        return spreadIndices;
+      }
+
+      // For a given "accessible page index" return the page number in the book.
+      // For example, index 5 might correspond to "Page 1" if there is front matter
+      // such as a title page and table of contents.
+      br.getPageNum = function(index) {
+        return index+1;
+      }
+
+      br.leafNumToIndex = function(leafnum) {
+        return leafnum-1;
+      }
+
+      br.getEmbedCode = function(frameWidth, frameHeight, params) {
+        // We don't need to provide an embedded code in our minimal example.
+        return;
+      }
+
+      // Override built-in search function to adapt to our API
+      br.search = function(term) {
+        $('#textSrch').blur(); //cause mobile safari to hide the keyboard
+
+        var url = "{{ url_for('search_book', bookname=bookname) }}" + term;
+        this.searchTerm = term;
+        this.removeSearchResults();
+        this.showProgressPopup('<img id="searchmarker" src="'+this.imagesBaseURL + 'marker_srch-on.png'+'"> Search results will appear below...');
+        $.ajax({url:url, dataType:'jsonp', jsonpCallback:'br.BRSearchCallback'});
+      }
+
+      // Get and set TOC
+      jQuery.ajax({
+        async: false,
+        url: "{{ url_for('get_book_toc', bookname=bookname) }}",
+        dataType: "json",
+        success: function(data) {
+          br.updateTOC(data['toc']);
+        }
+      });
+      // Start the reader
+      br.init();
+
+      // read-aloud and search need backend compenents and are not supported in
+      // this example.
+      $('#BRtoolbar').find('.read').hide();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,11 @@
+<!doctype html>
+<title>All Books</title>
+<div class=page>
+  <h1>All Books</h1>
+  <ul>
+    {% for book in books %}
+      <li><a href="/{{ book }}">{{ book }}</a></li>
+      {% endfor %}
+  </ul>
+</div>
+
