@@ -144,6 +144,9 @@
         $.ajax({url:url, dataType:'jsonp', jsonpCallback:'br.BRSearchCallback'});
       }
 
+      // Start the reader
+      br.init();
+
       // Get and set TOC
       jQuery.ajax({
         async: false,
@@ -153,8 +156,6 @@
           br.updateTOC(data['toc']);
         }
       });
-      // Start the reader
-      br.init();
 
       // read-aloud and search need backend compenents and are not supported in
       // this example.
