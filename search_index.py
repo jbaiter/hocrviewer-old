@@ -1,3 +1,4 @@
+# encoding=utf-8
 from __future__ import unicode_literals
 
 import os
@@ -5,18 +6,21 @@ import re
 from lxml import etree
 
 from whoosh import highlight
+from whoosh.analysis import CharsetFilter, RegexTokenizer
 from whoosh.fields import Schema, ID, NUMERIC, TEXT
 from whoosh.index import create_in, open_dir
 from whoosh.query import And, Term
 from whoosh.qparser import QueryParser
+from whoosh.support.charset import accent_map
 
+analyzer = RegexTokenizer() | CharsetFilter(accent_map)
 schema = Schema(
     bookname=ID(stored=True),
     pagenum=NUMERIC(stored=True),
-    content=TEXT(stored=True)
+    content=TEXT(analyzer=analyzer, stored=True)
 )
 
-BOOK_PATH = os.path.join(os.path.expanduser('~'), 'scans')
+BOOK_PATH = os.path.join(os.path.expanduser('~'), '.hocrviewer')
 INDEX_PATH = os.path.join(BOOK_PATH, '.index')
 
 
@@ -83,10 +87,12 @@ def _get_highlights(result):
                          "{0}.hocr".format(result['bookname']))
     tree = etree.parse(fname)
     page = tree.xpath('//div[@id="page_{0}"]'.format(result['pagenum']))[0]
-    hl_tokens = re.findall(r'{{{([^{}]+)}}}', result.highlights("content"))
+    hl_tokens = set(re.findall(r'{{{([^{}]+)}}}',
+                    result.highlights("content")))
     for token in hl_tokens:
         occurences = [x for x in page.xpath('.//span[@class="ocrx_word"]')
-                      if x.text and token.lower() in x.text.lower()]
+                      if "".join(x.itertext())
+                      and token.lower() in "".join(x.itertext()).lower()]
         for hit in occurences:
             highlights.append(tuple(hit.get('title').replace('bbox ', '')
                               .split(' ')))
