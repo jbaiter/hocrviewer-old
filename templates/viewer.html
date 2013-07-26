@@ -15,8 +15,17 @@
   <body>
     <div id="BookReader"/>
     <script type="text/javascript">
-      // We cache the page dimensions in this global array
+      // We store the page dimensions in this global array
     var dimensions = {};
+
+    jQuery.ajax({
+      async: false,
+      url: "{{ url_for('get_dimensions', bookname=bookname) }}",
+      dataType: "json",
+      success: function(data) {
+        dimensions = data['dimensions'];
+      }
+    });
 
     br = new BookReader();
 
@@ -62,25 +71,12 @@
         return url;
       }
 
-      br.getDimensions = function(index) {
-        if (dimensions[index] === undefined) {
-          jQuery.ajax({
-            async: false,
-            url: "{{ url_for('get_dimensions', bookname=bookname) }}" + (index+1),
-            dataType: "json",
-            success: function(data) {
-              dimensions[index] = data;
-            }
-          });
-        }
-        return dimensions[index];
-      }
 
       br.getPageWidth = function(index) {
-        return this.getDimensions(index)['width'];
+        return dimensions[index]['width'];
       }
       br.getPageHeight = function(index) {
-        return this.getDimensions(index)['height'];
+        return dimensions[index]['height'];
       }
 
       // Return which side, left or right, that a given page should be displayed on

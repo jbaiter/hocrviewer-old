@@ -33,6 +33,15 @@ def get_page_fname(bookname, page_idx):
                                      .format(page_idx), x.lower())))
     return fname
 
+def _get_dimensions(bookname):
+    dimensions = []
+    imgpath = os.path.join(BOOK_PATH, bookname, 'img')
+    for fname in os.listdir(imgpath):
+        fname = os.path.join(imgpath, fname)
+        with Image(filename=fname) as img:
+            dimensions.append({'width': img.width, 'height': img.height})
+    return dimensions
+
 def _get_metadata(bookname):
     metadict = defaultdict(unicode)
     tree = etree.parse(os.path.join(BOOK_PATH, bookname,
@@ -146,18 +155,12 @@ def search_book(bookname, search_term=None):
         return jsonify(out_dict)
 
 
-@app.route('/api/<bookname>/dimensions/')
-@app.route('/api/<bookname>/dimensions/<int:page_idx>', methods=['GET'])
-def get_dimensions(bookname, page_idx=1):
-    """ Obtain width and height for a given page from a book. """
+@app.route('/api/<bookname>/dimensions', methods=['GET'])
+def get_dimensions(bookname):
+    """ Obtain width and height for all pages from a book. """
     if not bookname in os.listdir(BOOK_PATH):
         abort(404)
-    fname = get_page_fname(bookname, page_idx)
-    if not os.path.exists(fname):
-        abort(404)
-    with Image(filename=fname) as img:
-        dimensions = {'width': img.width, 'height': img.height}
-    return jsonify(dimensions)
+    return jsonify({'dimensions': _get_dimensions(bookname)})
 
 
 @app.route('/api/<bookname>/img/', methods=['GET'])
