@@ -29,10 +29,26 @@
       success: function(data) {
         br.numLeafs = data['num_pages'];
         br.bookTitle = data['title'];
+        if (data['creator']) {
+          br.bookTitle = data['creator'] + ": " + br.bookTitle;
+        }
+        if (data['date']) {
+          br.bookTitle = br.bookTitle + " (" + data['date'] + ")";
+          }
+        if (data['description']) {
+          br.bookDescription = data['description'];
+        }
         br.bookUrl  = "{{ url_for('view', bookname=bookname) }}";
       }
     });
   
+    br.buildInfoDiv = function(jInfoDiv) {
+      jInfoDiv.find('.BRfloatTitle a').attr({'href': this.bookUrl, 'alt': this.bookTitle}).text(this.bookTitle);
+      if (br.bookDescription) {
+        jInfoDiv.find('.BRfloatBody').append('<div class="BRfloatSynopsis"><p>' + br.bookDescription + '</p></div>');
+      }
+      // TODO: Add paragraph with description
+    }
 
       // Specify the path where images for the UI are located
       br.imagesBaseURL = '{{ url_for(endpoint='static', filename='img/') }}';

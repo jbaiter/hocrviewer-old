@@ -1,5 +1,6 @@
 import os
 import re
+from collections import defaultdict
 from StringIO import StringIO
 
 from flask import (Flask, jsonify, abort, request, send_file, current_app,
@@ -32,13 +33,30 @@ def get_page_fname(bookname, page_idx):
                                      .format(page_idx), x.lower())))
     return fname
 
+def _get_metadata(bookname):
+    metadict = defaultdict(unicode)
+    tree = etree.parse(os.path.join(BOOK_PATH, bookname,
+                       "{0}.hocr".format(bookname)))
+    for field in ("Title", "Creator", "Description", "Publisher",
+                  "Contributor", "Date", "Language"):
+        elems = tree.xpath('//meta[@name="DC.{0}"]'.format(field))
+        if not elems:
+            continue
+        metadict[field.lower()] = elems[0].get('content')
+    metadict['num_pages'] = len(os.listdir(os.path.join(BOOK_PATH, bookname,
+                                                        'img')))
+    if not metadict['title']:
+        metadict['title'] = bookname
+    return metadict
+
 
 @app.route('/')
 def index():
     # TODO: Display list of all available books
-    return render_template('index.html',
-                           books=[x for x in os.listdir(BOOK_PATH)
-                                  if not x.startswith('.')])
+    return render_template(
+        'index.html',
+        books={x: _get_metadata(x) for x in os.listdir(BOOK_PATH)
+               if not x.startswith('.')})
 
 
 @app.route('/<bookname>')
@@ -73,11 +91,7 @@ def get_book(bookname):
     """ Obtain metadata for book. """
     if not bookname in os.listdir(BOOK_PATH):
         abort(404)
-    out_dict = {}
-    out_dict['num_pages'] = len(os.listdir(os.path.join(BOOK_PATH, bookname,
-                                                        'img')))
-    out_dict['title'] = bookname
-    # TODO: Open book.hocr, read DC metadata header, turn to json
+    out_dict = _get_metadata(bookname)
     return jsonify(out_dict)
 
 

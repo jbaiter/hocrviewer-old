@@ -3,9 +3,11 @@
 <div class=page>
   <h1>All Books</h1>
   <ul>
-    {% for book in books %}
-      <li><a href="/{{ book }}">{{ book }}</a></li>
-      {% endfor %}
+    {% for bookname, meta in books.items() %}
+    <li><a href="/{{ bookname }}">
+      {{ meta['creator'] + ': ' if meta['creator']}}{{ meta['title'] }}
+    </a></li>
+    {% endfor %}
   </ul>
 </div>
 
