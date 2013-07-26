@@ -33,6 +33,15 @@ def get_page_fname(bookname, page_idx):
                                      .format(page_idx), x.lower())))
     return fname
 
+def memoize(func):
+    """ Memoization decorator for a function taking a single argument """
+    class memodict(dict):
+        def __missing__(self, key):
+            ret = self[key] = func(key)
+            return ret 
+    return memodict().__getitem__
+
+@memoize
 def _get_dimensions(bookname):
     dimensions = []
     imgpath = os.path.join(BOOK_PATH, bookname, 'img')
@@ -42,6 +51,7 @@ def _get_dimensions(bookname):
             dimensions.append({'width': img.width, 'height': img.height})
     return dimensions
 
+@memoize
 def _get_metadata(bookname):
     metadict = defaultdict(unicode)
     tree = etree.parse(os.path.join(BOOK_PATH, bookname,
