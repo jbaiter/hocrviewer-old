@@ -69,6 +69,8 @@ def search(term, bookname=None, limit=None):
             query = And([query, Term("bookname", unicode(bookname))])
         results = searcher.search(query, limit=limit)
         results.fragmenter.charlimit = None
+        results.fragmenter.maxchars = 300
+        results.fragmenter.surround = 50
         results.formatter = StringFormatter('{{{', '}}}')
         for hit in results:
             out_list.append({
