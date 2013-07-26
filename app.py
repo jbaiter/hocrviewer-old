@@ -1,7 +1,6 @@
 import os
 import re
 from StringIO import StringIO
-from functools import wraps
 
 from flask import (Flask, jsonify, abort, request, send_file, current_app,
                    Response, render_template)
@@ -15,7 +14,12 @@ import search_index
 #         <name>.hocr
 #         img/<pagenum>.jpg
 #       pagenum should be zero-padded to four, i.e. 0001.<extension>
-BOOK_PATH = os.path.join(os.path.expanduser('~'), 'scans')
+BOOK_PATH = os.path.join(os.path.expanduser('~'), '.hocrviewer')
+# TODO: Customize the following variables:
+#       - Logo
+#       - Logo Link
+# TODO: Generate JavaScript through Jinja-Template, don't inline it in the
+#       HTML-Template
 
 app = Flask(__name__)
 
@@ -39,18 +43,18 @@ def index():
 
 @app.route('/<bookname>')
 def view(bookname):
-    # TODO: Display IA Viewer for bookname
     return render_template('viewer.html', bookname=bookname)
 
 
 @app.route('/api/list')
 def list():
     """ Return list of all available books. """
-    return jsonify({'books': os.listdir(BOOK_PATH)})
+    return jsonify({'books': [x for x in os.listdir(BOOK_PATH)
+                              if not x.startswith('.')]})
 
 
-@app.route('/api/reindex')
-@app.route('/api/<bookname>/reindex')
+@app.route('/api/reindex', methods=['GET'])
+@app.route('/api/<bookname>/reindex', methods=['GET'])
 def reindex(bookname=None):
     """ Recreate Whoosh index for all or a single book. """
     if bookname and not bookname in os.listdir(BOOK_PATH):
@@ -58,7 +62,7 @@ def reindex(bookname=None):
     if bookname:
         books = [bookname]
     else:
-        books = os.listdir(BOOK_PATH)
+        books = [x for x in os.listdir(BOOK_PATH) if not x.startswith('.')]
     for book in books:
         search_index.index_book(book)
     return Response(status=200)
@@ -90,8 +94,8 @@ def get_book_toc(bookname):
     # NOTE: BookReader TOC is flat at the moment, so we can get away with this:
     output = {'toc': (
         [{'title': "".join(x.itertext()).strip(),
-          'pagenum': int(x.xpath('ancestor::div[@class="ocr_page"]')[0]
-                         .get('id')[5:])}
+          'pagenum': (x.xpath('ancestor::div[@class="ocr_page"]')[0]
+                      .get('id')[5:])}
          for x in struc_elems])
     }
     return jsonify(output)
@@ -155,10 +159,7 @@ def get_image(bookname, page_idx=1):
     rotate = request.args.get('rotate', type=int)
     img_io = StringIO()
     with Image(filename=fname) as img:
-        print request.args.get('scale', type=int)
-        print scale_factor
         if scale_factor:
-            print "Scaling!"
             img.resize(width=int(scale_factor*img.width),
                        height=int(scale_factor*img.height))
         if rotate:
